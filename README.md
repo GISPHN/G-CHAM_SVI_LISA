@@ -34,4 +34,4 @@ MIT License。詳細は [`svi_lisa_qgis/LICENSE`](svi_lisa_qgis/LICENSE) を参�
 
 ## 引用
 
-研究等で本プラグインを使用した場合は、バージョンを明記して引用してください。APA、Vancouver、Chicago、MLA、BibTeXの形式は [`CITATION.md`](CITATION.md) に掲載しています。GitHubの引用機能向けメタデータは [`CITATION.cff`](CITATION.cff) を参照してください。LISAの分析方法を説明する場合は、方法の原著論文も引用してください。
+研究等で本プラグインを使用した場合は、バージョンを明記して引用してください。APA、Vancouver、BibTeXの形式は [`CITATION.md`](CITATION.md) に掲載しています。GitHubの引用機能向けメタデータは [`CITATION.cff`](CITATION.cff) を参照してください。LISAの分析方法を説明する場合は、方法の原著論文も引用してください。
