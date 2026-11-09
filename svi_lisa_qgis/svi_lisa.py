@@ -4,8 +4,9 @@ import csv
 from datetime import datetime
 import math
 import os
-import random
 from collections import Counter
+
+import numpy as np
 
 from qgis.PyQt.QtCore import QCoreApplication, QEventLoop
 from qgis.PyQt.QtWidgets import (QAction, QCheckBox, QComboBox, QDialog,
@@ -46,10 +47,8 @@ def _field_type(name):
 
 
 def _polygon_geometry_type():
-    """Handle scoped geometry enums introduced for newer QGIS APIs."""
-    if getattr(Qgis, "QGIS_VERSION_INT", 0) >= 40000:
-        return Qgis.GeometryType.Polygon
-    return QgsWkbTypes.PolygonGeometry
+    """Return the scoped geometry enum used by supported QGIS releases."""
+    return Qgis.GeometryType.Polygon
 
 
 class SviLisaPlugin:
@@ -194,11 +193,9 @@ class MainDialog(QDialog):
         self.log_output.appendPlainText(f"[{timestamp}] {message}")
         scrollbar = self.log_output.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
-        try:
-            flags = QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents
-        except AttributeError:
-            flags = QEventLoop.ExcludeUserInputEvents
-        QCoreApplication.processEvents(flags)
+        QCoreApplication.processEvents(
+            QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents
+        )
 
     def _finish_log(self, message):
         self._append_log(message)
@@ -623,7 +620,8 @@ class MainDialog(QDialog):
                     self._append_log(f"近傍を検索中: {i + 1:,}/{n:,}地物")
             lag=[sum(z[j] for j in js)/len(js) if js else 0 for i,js in enumerate(neighbors)]
             Ii=[z[i]*lag[i]/m2 for i in range(n)]
-            observed=[]; pvals=[]; rng=random.Random(20261106); P=self.perm_spin.value()
+            observed=[]; pvals=[]; rng=np.random.default_rng(20261106)
+            P=self.perm_spin.value()
             self._append_log("局所 Moran’s I の置換検定を実行中です。")
             report_every=max(1, min(250, n // 20 or 1))
             for i,js in enumerate(neighbors):
@@ -631,7 +629,9 @@ class MainDialog(QDialog):
                 for _ in range(P):
                     # Draw from n-1 positions, mapping around the focal observation.
                     # This avoids rebuilding an O(n) candidate list for every feature.
-                    picks=rng.sample(range(n-1), min(len(js), n-1))
+                    picks = rng.choice(
+                        n - 1, size=min(len(js), n - 1), replace=False
+                    )
                     sample=[z[pick if pick < i else pick+1] for pick in picks]
                     perm=z[i]*(sum(sample)/len(sample))/m2
                     if abs(perm) >= abs(Ii[i]): extreme += 1
