@@ -34,4 +34,28 @@ MIT License。詳細は [`svi_lisa_qgis/LICENSE`](svi_lisa_qgis/LICENSE) を参�
 
 ## 引用
 
-研究等で本プラグインを使用した場合は、バージョンを明記して引用してください。APA、Vancouver、BibTeXの形式は [`CITATION.md`](CITATION.md) に掲載しています。GitHubの引用機能向けメタデータは [`CITATION.cff`](CITATION.cff) を参照してください。LISAの分析方法を説明する場合は、方法の原著論文も引用してください。
+研究等で本プラグインを使用した場合は、利用したバージョンを明記して引用してください。以下はバージョン0.1.5の例です。各引用文をコピーして使用できます。
+
+APA第7版：
+
+> GISPHN (Ryo Horiike). (2026). *G-CHAM SVI and LISA* (Version 0.1.5) [Computer software]. GitHub.  
+> https://github.com/GISPHN/G-CHAM_SVI_LISA
+
+Vancouver形式：
+
+> GISPHN (Ryo Horiike). G-CHAM SVI and LISA [computer software]. Version 0.1.5. GitHub; 2026 [cited 2026 Nov 10]. Available from: https://github.com/GISPHN/G-CHAM_SVI_LISA
+
+BibTeX：
+
+```bibtex
+@software{Horiike2026GCHAMSVILISA,
+  author = {{GISPHN (Ryo Horiike)}},
+  title = {G-CHAM SVI and LISA},
+  version = {0.1.5},
+  year = {2026},
+  url = {https://github.com/GISPHN/G-CHAM_SVI_LISA},
+  note = {QGIS plugin}
+}
+```
+
+GitHubの引用機能向けメタデータは [`CITATION.cff`](CITATION.cff) に掲載しています。LISAの分析方法を説明する場合は、方法の原著論文も引用してください。原著論文の詳細と追加の案内は [`CITATION.md`](CITATION.md) を参照してください。
