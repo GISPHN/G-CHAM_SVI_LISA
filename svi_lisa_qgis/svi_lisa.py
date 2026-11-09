@@ -335,7 +335,7 @@ class MainDialog(QDialog):
         total = layer.featureCount()
         feats = []
         vals = []
-        self._append_log(f"Reading raw values ({total:,}features）")
+        self._append_log(f"Reading raw values (total {total:,} features)")
         for count, f in enumerate(layer.getFeatures(), 1):
             row = []
             for _, raw, num, den, _ in specs:
@@ -350,8 +350,8 @@ class MainDialog(QDialog):
             feats.append(f)
             vals.append(row)
             if count % 1000 == 0:
-                self._append_log(f"Reading raw values: {count:,}/{total:,}features")
-        self._append_log(f"Raw value reading complete: {len(feats):,}features")
+                self._append_log(f"Reading raw values: {count:,}/{total:,} features")
+        self._append_log(f"Raw value reading complete: {len(feats):,} features")
         return feats, vals
 
     @staticmethod
@@ -456,7 +456,7 @@ class MainDialog(QDialog):
         self._select_fresh_output_path()
         self._output_session_active = True
         self._start_log("SVI calculation")
-        self._append_log(f"Input layer: {layer.name()}（{layer.featureCount():,}features）")
+        self._append_log(f"Input layer: {layer.name()} ({layer.featureCount():,} features)")
         self._append_log(f"Number of indicators: {len(specs)}")
         if self.output_path:
             self._append_log(f"Output: {self.output_path}")
@@ -464,7 +464,7 @@ class MainDialog(QDialog):
             feats, raw = self._values_for(layer, specs)
             percs = []
             for j, spec in enumerate(specs):
-                self._append_log(f"Ranking indicator {j + 1}/{len(specs)}（{spec[0]}）")
+                self._append_log(f"Ranking indicator {j + 1}/{len(specs)} ({spec[0]})")
                 percs.append(self._percentiles([r[j] for r in raw], spec[4]))
                 self._append_log(f"Indicator ranking complete: {j + 1}/{len(specs)}")
             means = []
@@ -472,7 +472,7 @@ class MainDialog(QDialog):
                 row = [percs[j][i] for j in range(len(specs))]
                 means.append(sum(row) / len(row) if all(v is not None for v in row) else None)
                 if (i + 1) % 1000 == 0:
-                    self._append_log(f"Calculating SVI sum: {i + 1:,}/{len(feats):,}features")
+                    self._append_log(f"Calculating SVI sum: {i + 1:,}/{len(feats):,} features")
             if not any(value is not None for value in means):
                 raise ValueError("No features have valid values for all selected indicators. Check source values, numerator, denominator, and missing data.")
             self._append_log("Ranking the combined SVI values.")
@@ -496,7 +496,7 @@ class MainDialog(QDialog):
             for i in range(len(feats)):
                 extras.append([x for col in data_cols for x in col[i]] + [sum(percs[j][i] for j in range(len(specs))) if means[i] is not None else None, means[i], svi_rank[i], contrib_names[i], contrib_scores[i]])
                 if (i + 1) % 1000 == 0:
-                    self._append_log(f"Preparing output attributes: {i + 1:,}/{len(feats):,}features")
+                    self._append_log(f"Preparing output attributes: {i + 1:,}/{len(feats):,} features")
             self._append_log("Writing the SVI layer to the GeoPackage.")
             out = self._output_layer(layer, out_fields, feats, extras, layer.name() + "_SVI")
             self._append_log("SVI layer write complete.")
@@ -579,7 +579,7 @@ class MainDialog(QDialog):
                     ok=False
                 if ok: valid.append(i); ys.append(v)
                 if (i + 1) % 1000 == 0:
-                    self._append_log(f"Input check: {i + 1:,}/{total:,}features")
+                    self._append_log(f"Input check: {i + 1:,}/{total:,} features")
             n=len(valid)
             if n < 4: raise ValueError("At least four features with valid numeric values are required.")
             if n > 20000: raise ValueError("The analysis is limited to 20,000 features. Reduce the study area.")
@@ -594,7 +594,7 @@ class MainDialog(QDialog):
             for position, feature in enumerate(subset_feats, 1):
                 centers.append(feature.geometry().pointOnSurface().asPoint())
                 if position % 1000 == 0:
-                    self._append_log(f"Creating representative points: {position:,}/{n:,}features")
+                    self._append_log(f"Creating representative points: {position:,}/{n:,} features")
             # Index representative points, not polygon bounding boxes. Otherwise
             # nearest-neighbour queries can rank large/irregular polygons by bbox distance.
             index=QgsSpatialIndex()
@@ -604,7 +604,7 @@ class MainDialog(QDialog):
                 point_feature.setGeometry(QgsGeometry.fromPointXY(center))
                 index.addFeature(point_feature)
                 if position % 1000 == 0:
-                    self._append_log(f"Building neighbor index: {position:,}/{n:,}features")
+                    self._append_log(f"Building neighbor index: {position:,}/{n:,} features")
             self._append_log("Neighbor index creation complete.")
             neighbors=[]
             fid_to_pos={f.id():q for q,f in enumerate(subset_feats)}
@@ -620,7 +620,7 @@ class MainDialog(QDialog):
                     near=[j for _,j in ds[:min(self.k_spin.value(),n-1)]]
                 neighbors.append(near[:min(self.k_spin.value(), n-1)])
                 if (i + 1) % 1000 == 0:
-                    self._append_log(f"Finding neighbors: {i + 1:,}/{n:,}features")
+                    self._append_log(f"Finding neighbors: {i + 1:,}/{n:,} features")
             lag=[sum(z[j] for j in js)/len(js) if js else 0 for i,js in enumerate(neighbors)]
             Ii=[z[i]*lag[i]/m2 for i in range(n)]
             observed=[]; pvals=[]; rng=random.Random(20261106); P=self.perm_spin.value()
@@ -637,12 +637,12 @@ class MainDialog(QDialog):
                     if abs(perm) >= abs(Ii[i]): extreme += 1
                 observed.append(Ii[i]); pvals.append((extreme+1)/(P+1))
                 if (i + 1) % report_every == 0 or i + 1 == n:
-                    self._append_log(f"Permutation test: {i + 1:,}/{n:,}features ({(i + 1) * 100.0 / n:.1f}%）")
+                    self._append_log(f"Permutation test: {i + 1:,}/{n:,} features ({(i + 1) * 100.0 / n:.1f}%)")
             qvals=self._bh(pvals)
             alpha=self.alpha_spin.value()
             nominal_count=sum(value <= alpha for value in pvals)
             adjusted_count=sum(value <= alpha for value in qvals)
-            self._append_log(f"Permutation tests complete. Features with unadjusted p values at or below alpha: {nominal_count:,}features")
+            self._append_log(f"Permutation tests complete. Features with unadjusted p values at or below alpha: {nominal_count:,}")
             if self.fdr_check.isChecked():
                 self._append_log(f"Significant features after FDR correction: {adjusted_count:,} / Minimum adjusted p value: {min(qvals):.6f}")
                 if adjusted_count == 0 and nominal_count > 0:
