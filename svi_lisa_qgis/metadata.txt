@@ -2,11 +2,11 @@
 name=G-CHAM SVI and LISA
 qgisMinimumVersion=3.34
 qgisMaximumVersion=4.99
-description=Calculate a Social Vulnerability Index and perform local Moran's I (LISA) analysis on polygon layers.
+description=Calculate a percentile-based Social Vulnerability Index (SVI) and perform local Moran's I (LISA) analysis for polygon layers.
 version=0.1.5
-author=Ryo Horiike
+author=GISPHN (Ryo Horiike)
 email=ryo.horiike@naramed-u.ac.jp
-about=Computes percentile-based SVI scores and local Moran's I (LISA) using k-nearest neighbors. Exports SVI descriptive statistics and LISA category counts as spreadsheet-compatible CSV files. Requires a projected coordinate reference system for LISA analysis and supports up to 20,000 valid features.
+about=Calculate a percentile-based Social Vulnerability Index (SVI) and perform local Moran's I (LISA) analysis using k-nearest neighbors. Export the results as GeoPackage layers and spreadsheet-compatible CSV summaries, including counts for all six LISA categories. Supports up to 20,000 valid features and requires a projected coordinate reference system for LISA analysis.
 category=Vector
 license=MIT
 icon=icon.png
