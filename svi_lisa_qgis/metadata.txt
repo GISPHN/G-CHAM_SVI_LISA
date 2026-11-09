@@ -16,4 +16,4 @@ experimental=True
 hasProcessingProvider=no
 repository=https://github.com/GISPHN/G-CHAM_SVI_LISA
 tracker=https://github.com/GISPHN/G-CHAM_SVI_LISA/issues
-changelog=Added counts for all six LISA categories to the spreadsheet-compatible summary CSV, including analysis and total feature counts. Improved progress logging, GeoPackage output, Jenks styling, and QGIS 4 compatibility.
+changelog=Added counts for all six LISA categories to the spreadsheet-compatible summary CSV, including analysis and total feature counts. Fixed Qt6 enum checks and replaced the permutation-test random number generator with a reproducible NumPy generator.
