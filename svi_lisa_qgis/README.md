@@ -1,38 +1,40 @@
-# G-CHAM SVI and LISA
+G-CHAM SVI and LISA (0.1.4)
 
-A QGIS plugin for calculating a Social Vulnerability Index (SVI) and performing local Moran's I (LISA) analysis on polygon layers.
+インストール
 
-## Installation
+対応対象はQGIS 3.34以降です。Qt6を使用するQGIS 4系の列挙型表記にも対応する修正を含みます。
+1. ZIPを展開せず、QGISの「プラグイン」→「プラグインの管理とインストール」→「ZIPからインストール」から選択します。
+2. インストール後、「プラグイン」メニュー直下の「G-CHAM SVI and LISA」を開きます。
 
-Install the ZIP package from **Plugins → Manage and Install Plugins → Install from ZIP**. Select the release ZIP without extracting it.
+実装した機能
+- ポリゴンレイヤ内の数値フィールドを指標として選択
+- 指標ごとに「元データ」または「割合」を選択し、分子・分母から割合（%）を計算
+- 逆転項目の順位方向を反転
+- 平均順位法による0〜1パーセンタイル化、指標パーセンタイルの合算・平均、SVI最終パーセンタイル
+- 最大寄与指標（指標パーセンタイルが最大の指標。因果的寄与ではありません）
+- 記述統計CSV
+- SVI後の自動LISAまたはLISA単独実行で、Excelで開けるサマリーCSVに6カテゴリ（High-High、Low-Low、High-Low、Low-High、Not significant、No data）の該当数を出力。全地物数と分析対象数も併記
+- 任意の数値フィールドに対する局所Moran's I（k近傍、行標準化、置換検定、FDR補正）
+- 結果レイヤを自動追加し、SVIまたはLISAクラスターで着色
+- SVIのリスク強度とLISAの局所クラスターを表すアイコンをメニューとツールバーに表示
+- 計算中に進行状況・処理件数・出力先を表示する実行ログ
+- SVI計算後の自動LISAを、SVIレイヤと同じGeoPackage内の別レイヤとして保存
+- LISA単独実行もGeoPackageへ保存。出力先が未指定なら保存先を確認
 
-## Features
+利用上の制約
+- 比較対象は入力レイヤ全体です。自治体別などの層別計算は未実装です。
+- SVIは、選択した全指標がそろっている地物のみ計算します。欠損を0で補完しません。
+- 空間重みはk近傍法のみです。代表点（point-on-surface）の近傍を平面距離で求めるため、投影座標系が必要です。緯度・経度座標系は実行前にエラーとして止めます。
+- LISAは各指標のp値を計算し、初期設定ではBenjamini–Hochberg法で補正して有意性を判定します。
+- 置換p値の乱数シードは20261106に固定しています。
+- LISAは大規模データで時間がかかります。有効地物数は20,000件を上限とします。全国250mメッシュのような大規模データでの実行性能は未検証です。
+- SVIとLISAは同じGeoPackageに別レイヤとして保存できます。指定した出力ファイルが既にある場合は既存結果を保持し、_1、_2の連番を付けた新しいファイルに保存します。
+- SVIは選択した全指標が有効な地物のみ総合値を算出します。LISAでは数値欠損と空ジオメトリの地物を分析対象から外します。
+- 研究利用・公表前に、対象データで結果と近傍設定を検証してください。
 
-- Select numeric source fields or calculate percentages from numerator and denominator fields.
-- Reverse the percentile direction for indicators where higher values represent lower vulnerability.
-- Convert indicators to average-rank percentiles from 0 to 1, then calculate SVI sums, means, and final percentiles.
-- Identify the indicator with the highest percentile for each feature. This is a descriptive indicator, not a causal contribution.
-- Run local Moran's I with k-nearest neighbors, row-standardized weights, permutation tests, and optional Benjamini–Hochberg correction.
-- Save results as separate SVI and LISA layers in a GeoPackage.
-- Export descriptive statistics and LISA category counts to CSV files that can be opened in spreadsheet software.
-- Display progress and processing details in a log window.
+出力列
+SVI: ind01_raw / ind01_pct のように指標ごとに元値とパーセンタイル、svi_sum、svi_mean、svi_pct、max_ind、max_pct。
+LISA: local_I、p_perm、p_fdr、lisa_cluster。
 
-## Analysis notes and limitations
-
-- SVI values are calculated only for features with valid values for every selected indicator. Missing values are not imputed.
-- LISA excludes features with missing numeric values or empty geometries.
-- The spatial weights use k-nearest representative points and planar distances. Use a projected coordinate reference system; geographic coordinate systems are rejected.
-- The default permutation seed is fixed at `20261106` for reproducibility.
-- The current implementation supports up to 20,000 valid LISA features. Runtime can increase substantially with dataset size and permutation count.
-- The analysis covers the entire input layer. Stratified calculations, such as separate analyses by municipality, are not implemented.
-- Review the results and neighborhood settings for the study data before research or publication use.
-
-## Output fields
-
-SVI outputs include `ind01_raw`, `ind01_pct` and corresponding fields for each indicator, plus `svi_sum`, `svi_mean`, `svi_pct`, `max_ind`, and `max_pct`.
-
-LISA outputs include `local_I`, `p_perm`, `p_fdr`, and `lisa_cluster`. The category summary reports High-High, Low-Low, High-Low, Low-High, Not significant, and No data counts, along with analysis and total feature counts.
-
-## License
-
-MIT License. See [LICENSE](LICENSE).
+ライセンス
+MIT License
