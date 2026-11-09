@@ -10,14 +10,6 @@ Horiike, R. (2026). *G-CHAM SVI and LISA* (Version 0.1.5) [Computer software]. G
 
 Horiike R. G-CHAM SVI and LISA [computer software]. Version 0.1.5. GitHub; 2026. Available from: https://github.com/GISPHN/G-CHAM_SVI_LISA
 
-## Chicago
-
-Horiike, Ryo. 2026. “G-CHAM SVI and LISA.” Version 0.1.5. GitHub. https://github.com/GISPHN/G-CHAM_SVI_LISA.
-
-## MLA 第9版
-
-Horiike, Ryo. *G-CHAM SVI and LISA*. Version 0.1.5, GitHub, 2026, https://github.com/GISPHN/G-CHAM_SVI_LISA.
-
 ## BibTeX
 
 ```bibtex
