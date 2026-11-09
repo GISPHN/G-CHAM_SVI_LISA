@@ -42,7 +42,7 @@ def _field_type(name):
         legacy_name = {"QString": "String"}.get(name, name)
         if hasattr(QVariant, legacy_name):
             return getattr(QVariant, legacy_name)
-    raise RuntimeError("Unable to determine the QGIS field type: " + name)
+    raise RuntimeError("QGISのフィールド型を取得できませんでした: " + name)
 
 
 def _polygon_geometry_type():
@@ -63,7 +63,7 @@ class SviLisaPlugin:
         self.action = QAction(QIcon(icon_path), "G-CHAM SVI and LISA", self.iface.mainWindow())
         self.action.setIconVisibleInMenu(True)
         self.action.setToolTip("G-CHAM SVI and LISA")
-        self.action.setStatusTip("Calculate an SVI and run local Moran’s I (LISA).")
+        self.action.setStatusTip("SVIの算出と局所Moran’s I（LISA）を実行します")
         self.action.triggered.connect(self.run)
         self.iface.pluginMenu().addAction(self.action)
         self.iface.addToolBarIcon(self.action)
@@ -94,12 +94,12 @@ class MainDialog(QDialog):
         self._log_close_button = None
         self._log_buttons = []
         root = QVBoxLayout(self)
-        note = QLabel("Calculate an SVI from a polygon layer or run a standalone LISA analysis.")
+        note = QLabel("ポリゴンレイヤを対象に、SVIの算出またはLISA単独分析を行います。")
         note.setWordWrap(True)
         root.addWidget(note)
         form = QFormLayout()
         self.layer_combo = QComboBox()
-        form.addRow("Input polygon layer", self.layer_combo)
+        form.addRow("入力ポリゴンレイヤ", self.layer_combo)
         root.addLayout(form)
         self.tabs = QTabWidget()
         root.addWidget(self.tabs)
@@ -115,77 +115,77 @@ class MainDialog(QDialog):
 
     def _build_svi_tab(self):
         tab = QWidget(); layout = QVBoxLayout(tab)
-        layout.addWidget(QLabel("For each indicator, select a raw value or a numerator and denominator. Check Reverse when higher values indicate lower vulnerability."))
+        layout.addWidget(QLabel("指標ごとに元データまたは分子・分母を指定します。逆転項目はチェックしてください。"))
         self.svi_table = QTableWidget(0, 6)
-        self.svi_table.setHorizontalHeaderLabels(["Indicator name", "Calculation", "Raw value", "Numerator", "Denominator", "Reverse"])
+        self.svi_table.setHorizontalHeaderLabels(["指標名", "計算方法", "元データ", "分子", "分母", "逆転"])
         self.svi_table.horizontalHeader().setStretchLastSection(True)
         layout.addWidget(self.svi_table)
         row = QHBoxLayout()
-        add = QPushButton("Add indicator"); add.clicked.connect(self.add_indicator)
-        remove = QPushButton("Remove selected rows"); remove.clicked.connect(self.remove_indicator)
+        add = QPushButton("指標を追加"); add.clicked.connect(self.add_indicator)
+        remove = QPushButton("選択行を削除"); remove.clicked.connect(self.remove_indicator)
         row.addWidget(add); row.addWidget(remove); row.addStretch(1)
         layout.addLayout(row)
         self.add_indicator()
-        self.svi_path = QLabel("Output: temporary layer")
-        path_btn = QPushButton("Choose output"); path_btn.clicked.connect(self.choose_output)
+        self.svi_path = QLabel("出力先: 一時レイヤ")
+        path_btn = QPushButton("出力先を選択"); path_btn.clicked.connect(self.choose_output)
         self.output_path = None
         outrow = QHBoxLayout(); outrow.addWidget(self.svi_path); outrow.addWidget(path_btn)
         layout.addLayout(outrow)
-        self.auto_lisa = QCheckBox("Run LISA on svi_sum after calculating the SVI")
+        self.auto_lisa = QCheckBox("SVI計算後に、svi_sumのLISAも続けて計算する")
         self.auto_lisa.setChecked(True)
         layout.addWidget(self.auto_lisa)
-        calc = QPushButton("Calculate SVI and add layer")
+        calc = QPushButton("SVIを計算してレイヤを追加")
         calc.clicked.connect(self.calculate_svi)
         self._log_buttons.append(calc)
         layout.addWidget(calc)
-        self.tabs.addTab(tab, "Calculate SVI")
+        self.tabs.addTab(tab, "SVIを計算")
 
     def _build_lisa_tab(self):
         tab = QWidget(); layout = QVBoxLayout(tab)
         form = QFormLayout()
-        self.lisa_field = QComboBox(); form.addRow("Numeric field to analyze", self.lisa_field)
+        self.lisa_field = QComboBox(); form.addRow("分析する数値フィールド", self.lisa_field)
         self.k_spin = QSpinBox(); self.k_spin.setRange(1, 100); self.k_spin.setValue(8)
-        form.addRow("Number of neighbors k (nearest neighbors)", self.k_spin)
+        form.addRow("近傍数 k（最近隣）", self.k_spin)
         self.perm_spin = QSpinBox(); self.perm_spin.setRange(99, 9999); self.perm_spin.setSingleStep(100); self.perm_spin.setValue(999)
-        form.addRow("Number of permutations", self.perm_spin)
+        form.addRow("置換検定回数", self.perm_spin)
         self.alpha_spin = QDoubleSpinBox(); self.alpha_spin.setRange(0.001, 0.2); self.alpha_spin.setDecimals(3); self.alpha_spin.setSingleStep(0.01); self.alpha_spin.setValue(0.05)
-        form.addRow("Significance level (after FDR correction)", self.alpha_spin)
+        form.addRow("有意水準（FDR補正後）", self.alpha_spin)
         layout.addLayout(form)
-        self.fdr_check = QCheckBox("Use Benjamini–Hochberg FDR correction")
+        self.fdr_check = QCheckBox("Benjamini–Hochberg FDR補正を使用")
         self.fdr_check.setChecked(True); layout.addWidget(self.fdr_check)
-        self.lisa_path = QLabel("Output: temporary layer")
-        lisa_path_btn = QPushButton("Choose output"); lisa_path_btn.clicked.connect(self.choose_output)
+        self.lisa_path = QLabel("出力先: 一時レイヤ")
+        lisa_path_btn = QPushButton("出力先を選択"); lisa_path_btn.clicked.connect(self.choose_output)
         row = QHBoxLayout(); row.addWidget(self.lisa_path); row.addWidget(lisa_path_btn); layout.addLayout(row)
-        explain = QLabel("Uses k-nearest neighbors with row-standardized weights. The result includes local Moran’s I, permutation p values, FDR-adjusted p values, and cluster categories. Results are saved to the selected GeoPackage. When LISA runs automatically after SVI, it is saved as a separate layer in the same file. Large datasets may take a long time to process.")
+        explain = QLabel("k近傍法・行標準化を使用します。結果には局所Moran’s I、置換p値、FDR補正後p値、クラスター区分を追加します。結果は指定したGeoPackageに保存され、SVI自動実行時はSVIレイヤと同じファイルに別レイヤとして追加されます。大規模データでは計算に時間がかかります。")
         explain.setWordWrap(True); layout.addWidget(explain)
-        calc = QPushButton("Calculate LISA and add layer")
+        calc = QPushButton("LISAを計算してレイヤを追加")
         calc.clicked.connect(self.calculate_lisa)
         self._log_buttons.append(calc)
         layout.addWidget(calc); layout.addStretch(1)
-        self.tabs.addTab(tab, "Run LISA only")
+        self.tabs.addTab(tab, "LISAを単独実行")
 
     def _start_log(self, title):
         if self.log_dialog is None:
             self.log_dialog = QDialog(self)
-            self.log_dialog.setWindowTitle("G-CHAM SVI and LISA — Processing log")
+            self.log_dialog.setWindowTitle("G-CHAM SVI and LISA — 計算ログ")
             self.log_dialog.resize(600, 340)
             layout = QVBoxLayout(self.log_dialog)
             self.log_output = QPlainTextEdit(self.log_dialog)
             self.log_output.setReadOnly(True)
             self.log_output.document().setMaximumBlockCount(500)
             layout.addWidget(self.log_output)
-            self._log_close_button = QPushButton("Close", self.log_dialog)
+            self._log_close_button = QPushButton("閉じる", self.log_dialog)
             self._log_close_button.clicked.connect(self.log_dialog.hide)
             layout.addWidget(self._log_close_button)
         self.log_output.clear()
-        self.log_dialog.setWindowTitle("G-CHAM SVI and LISA — " + title + " log")
+        self.log_dialog.setWindowTitle("G-CHAM SVI and LISA — " + title + "ログ")
         self.log_dialog.show()
         self.log_dialog.raise_()
         self.log_dialog.activateWindow()
         self._log_close_button.setEnabled(False)
         for button in self._log_buttons:
             button.setEnabled(False)
-        self._append_log(title + " started.")
+        self._append_log(title + "を開始しました。")
 
     def _append_log(self, message):
         if self.log_output is None:
@@ -237,7 +237,7 @@ class MainDialog(QDialog):
             for col in (2, 3, 4):
                 combo = self.svi_table.cellWidget(row, col)
                 if combo:
-                    old = combo.currentText(); combo.blockSignals(True); combo.clear(); combo.addItem("(Do not select)")
+                    old = combo.currentText(); combo.blockSignals(True); combo.clear(); combo.addItem("（選択しない）")
                     combo.addItems(fields); idx = combo.findText(old)
                     if idx >= 0: combo.setCurrentIndex(idx)
                     combo.blockSignals(False)
@@ -245,7 +245,7 @@ class MainDialog(QDialog):
         if combo is not None:
             old = combo.currentText()
             combo.clear()
-            combo.addItem("(Select a numeric field to analyze)", None)
+            combo.addItem("（分析する数値フィールドを選択）", None)
             for field_name in fields:
                 combo.addItem(field_name, field_name)
             idx = combo.findText(old)
@@ -255,16 +255,16 @@ class MainDialog(QDialog):
                 combo.setCurrentIndex(0)
 
     def _field_combo(self):
-        c = QComboBox(); c.addItem("(Do not select)"); c.addItems(self.numeric_fields()); return c
+        c = QComboBox(); c.addItem("（選択しない）"); c.addItems(self.numeric_fields()); return c
 
     def add_indicator(self):
         r = self.svi_table.rowCount(); self.svi_table.insertRow(r)
-        self.svi_table.setItem(r, 0, QTableWidgetItem("Indicator %02d" % (r + 1)))
-        mode = QComboBox(); mode.addItems(["Raw value", "Ratio"])
+        self.svi_table.setItem(r, 0, QTableWidgetItem("指標%02d" % (r + 1)))
+        mode = QComboBox(); mode.addItems(["元データ", "割合"])
         mode.currentIndexChanged.connect(lambda _value, row=r: self._update_row_mode(row))
         self.svi_table.setCellWidget(r, 1, mode)
         for c in (2, 3, 4): self.svi_table.setCellWidget(r, c, self._field_combo())
-        rev = QCheckBox(); rev.setToolTip("Check if higher values indicate lower vulnerability")
+        rev = QCheckBox(); rev.setToolTip("数値が高いほど脆弱性が低い場合にチェック")
         self.svi_table.setCellWidget(r, 5, rev)
         self._update_row_mode(r)
 
@@ -272,7 +272,7 @@ class MainDialog(QDialog):
         mode = self.svi_table.cellWidget(row, 1)
         if mode is None:
             return
-        use_ratio = mode.currentText() == "Ratio"
+        use_ratio = mode.currentText() == "割合"
         self.svi_table.cellWidget(row, 2).setEnabled(not use_ratio)
         self.svi_table.cellWidget(row, 3).setEnabled(use_ratio)
         self.svi_table.cellWidget(row, 4).setEnabled(use_ratio)
@@ -282,7 +282,7 @@ class MainDialog(QDialog):
         for r in rows: self.svi_table.removeRow(r)
 
     def choose_output(self):
-        path, _ = QFileDialog.getSaveFileName(self, "GeoPackage output path", "svi_lisa_output.gpkg", "GeoPackage (*.gpkg)")
+        path, _ = QFileDialog.getSaveFileName(self, "GeoPackage出力先", "svi_lisa_output.gpkg", "GeoPackage (*.gpkg)")
         if path:
             self._set_output_path(path)
 
@@ -290,8 +290,8 @@ class MainDialog(QDialog):
         if path and not path.lower().endswith(".gpkg"):
             path += ".gpkg"
         self.output_path = path
-        self.svi_path.setText("Output: " + path)
-        self.lisa_path.setText("Output: " + path)
+        self.svi_path.setText("出力先: " + path)
+        self.lisa_path.setText("出力先: " + path)
 
     def _ensure_output_path(self, title):
         if self.output_path:
@@ -319,15 +319,15 @@ class MainDialog(QDialog):
         specs = []
         for r in range(self.svi_table.rowCount()):
             name_item = self.svi_table.item(r, 0)
-            name = name_item.text().strip() if name_item else "Indicator %02d" % (r + 1)
+            name = name_item.text().strip() if name_item else "指標%02d" % (r + 1)
             mode = self.svi_table.cellWidget(r, 1).currentText()
             raw = self.svi_table.cellWidget(r, 2).currentText()
             num = self.svi_table.cellWidget(r, 3).currentText()
             den = self.svi_table.cellWidget(r, 4).currentText()
             reverse = self.svi_table.cellWidget(r, 5).isChecked()
-            if mode == "Raw value" and raw != "(Do not select)":
+            if mode == "元データ" and raw != "（選択しない）":
                 specs.append((name, raw, None, None, reverse))
-            elif mode == "Ratio" and num != "(Do not select)" and den != "(Do not select)":
+            elif mode == "割合" and num != "（選択しない）" and den != "（選択しない）":
                 specs.append((name, None, num, den, reverse))
         return specs
 
@@ -335,7 +335,7 @@ class MainDialog(QDialog):
         total = layer.featureCount()
         feats = []
         vals = []
-        self._append_log(f"Reading raw values (total {total:,} features)")
+        self._append_log(f"元データを読み込み中（全{total:,}地物）")
         for count, f in enumerate(layer.getFeatures(), 1):
             row = []
             for _, raw, num, den, _ in specs:
@@ -350,8 +350,8 @@ class MainDialog(QDialog):
             feats.append(f)
             vals.append(row)
             if count % 1000 == 0:
-                self._append_log(f"Reading raw values: {count:,}/{total:,} features")
-        self._append_log(f"Raw value reading complete: {len(feats):,} features")
+                self._append_log(f"元データ読み込み: {count:,}/{total:,}地物")
+        self._append_log(f"元データ読み込み完了: {len(feats):,}地物")
         return feats, vals
 
     @staticmethod
@@ -375,7 +375,7 @@ class MainDialog(QDialog):
         existing_names = {field.name().casefold() for field in source.fields()}
         duplicate_names = sorted({field.name() for field in fields if field.name().casefold() in existing_names})
         if duplicate_names:
-            raise ValueError("The input layer already contains output field(s): " + ", ".join(duplicate_names) + ". Select the original input layer or remove existing result fields.")
+            raise ValueError("入力レイヤに出力予定のフィールドが既にあります: " + ", ".join(duplicate_names) + "。元の入力レイヤを選ぶか、既存の計算結果フィールドを削除してください。")
         mem = QgsVectorLayer(QgsWkbTypes.displayString(source.wkbType()) + "?crs=" + source.crs().authid(), name, "memory")
         dp = mem.dataProvider(); dp.addAttributes(list(source.fields()) + fields); mem.updateFields()
         new_feats = []
@@ -399,11 +399,11 @@ class MainDialog(QDialog):
                     QgsVectorFileWriter, "CreateOrOverwriteFile",
                     action_enum.CreateOrOverwriteFile if action_enum else None)
             if opts.actionOnExistingFile is None:
-                raise RuntimeError("This QGIS API does not support saving individual layers to a GeoPackage.")
+                raise RuntimeError("GeoPackageのレイヤ単位保存に対応するQGIS APIが見つかりません。")
             result = QgsVectorFileWriter.writeAsVectorFormatV3(mem, path, QgsProject.instance().transformContext(), opts)
             if result[0] != 0: raise RuntimeError(str(result))
             out = QgsVectorLayer(path + "|layername=" + name, name, "ogr")
-            if not out.isValid(): raise RuntimeError("The output GeoPackage could not be opened.")
+            if not out.isValid(): raise RuntimeError("出力したGeoPackageを開けませんでした。")
         else: out = mem
         QgsProject.instance().addMapLayer(out)
         return out
@@ -431,7 +431,7 @@ class MainDialog(QDialog):
             return
 
         colors = ["#ffffcc", "#c2e699", "#78c679", "#31a354", "#006837"]
-        descriptors = ["Very low", "Low", "Medium", "High", "Very high"]
+        descriptors = ["低", "やや低", "中", "やや高", "高"]
         ranges = []
         for index, jenks_range in enumerate(classes):
             lower = float(jenks_range.lowerBound())
@@ -439,7 +439,7 @@ class MainDialog(QDialog):
             symbol = QgsSymbol.defaultSymbol(layer.geometryType())
             symbol.setColor(QColor(colors[min(index, len(colors) - 1)]))
             descriptor = descriptors[min(index, len(descriptors) - 1)]
-            label = f"{lower:.3f} – {upper:.3f} ({descriptor})"
+            label = f"{lower:.3f} – {upper:.3f}（{descriptor}）"
             ranges.append(QgsRendererRange(lower, upper, symbol, label))
 
         renderer = QgsGraduatedSymbolRenderer(field, ranges)
@@ -450,32 +450,32 @@ class MainDialog(QDialog):
     def calculate_svi(self):
         layer = self.layer(); specs = self._indicators()
         if not layer or not specs:
-            QMessageBox.warning(self, "Missing input", "Select a polygon layer and at least one indicator (raw value or numerator and denominator)."); return
-        if self.auto_lisa.isChecked() and not self._ensure_output_path("SVI and LISA output path"):
+            QMessageBox.warning(self, "入力不足", "ポリゴンレイヤと、少なくとも1つの指標（元データまたは分子・分母）を指定してください。"); return
+        if self.auto_lisa.isChecked() and not self._ensure_output_path("SVI・LISA結果の保存先"):
             return
         self._select_fresh_output_path()
         self._output_session_active = True
-        self._start_log("SVI calculation")
-        self._append_log(f"Input layer: {layer.name()} ({layer.featureCount():,} features)")
-        self._append_log(f"Number of indicators: {len(specs)}")
+        self._start_log("SVI計算")
+        self._append_log(f"入力レイヤ: {layer.name()}（{layer.featureCount():,}地物）")
+        self._append_log(f"使用指標数: {len(specs)}")
         if self.output_path:
-            self._append_log(f"Output: {self.output_path}")
+            self._append_log(f"出力先: {self.output_path}")
         try:
             feats, raw = self._values_for(layer, specs)
             percs = []
             for j, spec in enumerate(specs):
-                self._append_log(f"Ranking indicator {j + 1}/{len(specs)} ({spec[0]})")
+                self._append_log(f"指標の順位計算中: {j + 1}/{len(specs)}（{spec[0]}）")
                 percs.append(self._percentiles([r[j] for r in raw], spec[4]))
-                self._append_log(f"Indicator ranking complete: {j + 1}/{len(specs)}")
+                self._append_log(f"指標の順位計算完了: {j + 1}/{len(specs)}")
             means = []
             for i in range(len(feats)):
                 row = [percs[j][i] for j in range(len(specs))]
                 means.append(sum(row) / len(row) if all(v is not None for v in row) else None)
                 if (i + 1) % 1000 == 0:
-                    self._append_log(f"Calculating SVI sum: {i + 1:,}/{len(feats):,} features")
+                    self._append_log(f"SVI合算: {i + 1:,}/{len(feats):,}地物")
             if not any(value is not None for value in means):
-                raise ValueError("No features have valid values for all selected indicators. Check source values, numerator, denominator, and missing data.")
-            self._append_log("Ranking the combined SVI values.")
+                raise ValueError("選択した指標をすべて計算できる地物がありません。元データ、分子・分母、欠損値を確認してください。")
+            self._append_log("SVI合算値を順位化しています。")
             svi_rank = self._percentiles(means)
             contrib_names, contrib_scores = [], []
             for i in range(len(feats)):
@@ -496,15 +496,15 @@ class MainDialog(QDialog):
             for i in range(len(feats)):
                 extras.append([x for col in data_cols for x in col[i]] + [sum(percs[j][i] for j in range(len(specs))) if means[i] is not None else None, means[i], svi_rank[i], contrib_names[i], contrib_scores[i]])
                 if (i + 1) % 1000 == 0:
-                    self._append_log(f"Preparing output attributes: {i + 1:,}/{len(feats):,} features")
-            self._append_log("Writing the SVI layer to the GeoPackage.")
+                    self._append_log(f"出力属性を準備中: {i + 1:,}/{len(feats):,}地物")
+            self._append_log("SVIレイヤをGeoPackageに書き込んでいます。")
             out = self._output_layer(layer, out_fields, feats, extras, layer.name() + "_SVI")
-            self._append_log("SVI layer write complete.")
+            self._append_log("SVIレイヤの書き込みが完了しました。")
             self._style(out, "svi_pct")
-            self._append_log("Applied the natural breaks style to the SVI layer.")
-            self._append_log("Writing the descriptive statistics CSV.")
+            self._append_log("SVIレイヤの自然分類スタイルを設定しました。")
+            self._append_log("記述統計CSVを書き込んでいます。")
             self._write_stats(specs, raw, percs, means, svi_rank)
-            self._append_log("Descriptive statistics CSV write complete.")
+            self._append_log("記述統計CSVの書き込みが完了しました。")
             if self.auto_lisa.isChecked():
                 self.layer_combo.addItem(out.name(), out)
                 self.layer_combo.setCurrentIndex(self.layer_combo.count() - 1)
@@ -512,34 +512,34 @@ class MainDialog(QDialog):
                 self.lisa_field.setCurrentText("svi_sum")
                 self.tabs.setCurrentIndex(1)
                 # Save LISA as a second layer in the same GeoPackage as SVI.
-                self._append_log("Calculating LISA on the combined SVI.")
+                self._append_log("続けてSVI合算値のLISAを計算します。")
                 self.calculate_lisa()
             else:
-                self._append_log("SVI calculation complete.")
-                QMessageBox.information(self, "Complete", "The SVI layer was added. Indicator percentiles and descriptive statistics were exported to CSV. The maximum indicator is the one with the highest indicator percentile; this is not a causal contribution.")
+                self._append_log("SVI計算が完了しました。")
+                QMessageBox.information(self, "完了", "SVIレイヤを追加しました。指標別パーセンタイルとSVI記述統計CSVを出力しました。最大寄与指標は最大の指標パーセンタイルを示します。")
         except Exception as e:
-            self._append_log("Error: " + str(e))
-            QMessageBox.critical(self, "SVI calculation error", str(e))
+            self._append_log("エラー: " + str(e))
+            QMessageBox.critical(self, "SVI計算エラー", str(e))
         finally:
             self._output_session_active = False
-            self._finish_log("Processing finished.")
+            self._finish_log("処理を終了しました。")
 
     def _write_stats(self, specs, raw, percs, means, ranks):
         path = (self.output_path[:-5] if self.output_path and self.output_path.lower().endswith(".gpkg") else self.output_path) if self.output_path else None
         if not path:
-            path, _ = QFileDialog.getSaveFileName(self, "Save descriptive statistics CSV", "svi_descriptive_statistics.csv", "CSV (*.csv)")
+            path, _ = QFileDialog.getSaveFileName(self, "記述統計CSVの保存", "svi_descriptive_statistics.csv", "CSV (*.csv)")
             if not path: return
         if not path.lower().endswith(".csv"): path += "_statistics.csv"
         with open(path, "w", newline="", encoding="utf-8-sig") as fp:
-            w = csv.writer(fp); w.writerow(["Variable", "Valid count", "Missing count", "Mean", "Standard deviation", "Median", "Minimum", "Maximum"])
-            columns = [(specs[j][0] + " (raw value/ratio)", [r[j] for r in raw]) for j in range(len(specs))]
-            columns += [(specs[j][0] + " (percentile)", percs[j]) for j in range(len(specs))]
+            w = csv.writer(fp); w.writerow(["項目", "有効数", "欠損数", "平均", "標準偏差", "中央値", "最小", "最大"])
+            columns = [(specs[j][0] + "（元値/割合）", [r[j] for r in raw]) for j in range(len(specs))]
+            columns += [(specs[j][0] + "（パーセンタイル）", percs[j]) for j in range(len(specs))]
             sums = [value * len(specs) if value is not None else None for value in means]
             max_pct = []
             for i in range(len(means)):
                 row = [col[i] for col in percs]
                 max_pct.append(max(row) if row and all(value is not None for value in row) else None)
-            columns += [("SVI sum", sums), ("SVI mean", means), ("Final SVI percentile", ranks), ("Maximum indicator percentile", max_pct)]
+            columns += [("SVI合計", sums), ("SVI平均", means), ("SVI最終パーセンタイル", ranks), ("最大指標パーセンタイル", max_pct)]
             for name, seq in columns:
                 a = sorted(float(x) for x in seq if x is not None and math.isfinite(float(x)))
                 if not a: w.writerow([name, 0, len(seq), "", "", "", "", ""]); continue
@@ -551,26 +551,26 @@ class MainDialog(QDialog):
         layer = self.layer()
         field = self.lisa_field.currentData()
         if not layer or not field:
-            QMessageBox.warning(self, "Missing input", "Select a polygon layer and a numeric field to analyze."); return
+            QMessageBox.warning(self, "入力不足", "ポリゴンレイヤと分析する数値フィールドを選択してください。"); return
         owns_output_session = not self._output_session_active
         if owns_output_session:
-            if not self._ensure_output_path("LISA output path"):
+            if not self._ensure_output_path("LISA結果の保存先"):
                 return
             self._select_fresh_output_path()
             self._output_session_active = True
-            self._start_log("LISA calculation")
-        self._append_log(f"Analysis layer: {layer.name()} / Field: {field}")
-        self._append_log(f"Permutations: {self.perm_spin.value():,} / Neighbors: {self.k_spin.value()} / FDR correction: {'On' if self.fdr_check.isChecked() else 'Off'}")
+            self._start_log("LISA計算")
+        self._append_log(f"分析レイヤ: {layer.name()} / フィールド: {field}")
+        self._append_log(f"置換回数: {self.perm_spin.value():,} / 近傍数: {self.k_spin.value()} / FDR補正: {'使用' if self.fdr_check.isChecked() else '不使用'}")
         if self.output_path:
-            self._append_log(f"Output: {self.output_path}")
+            self._append_log(f"出力先: {self.output_path}")
         try:
             idx=layer.fields().indexFromName(field)
             if idx < 0:
-                QMessageBox.warning(self, "Check field", "The selected numeric field is not in the input layer. Select the layer again, then reselect the field."); return
+                QMessageBox.warning(self, "フィールドを確認", "選択した数値フィールドが入力レイヤにありません。レイヤを選び直してから、フィールドも選択し直してください。"); return
             feats=[]
             valid=[]; ys=[]
             total=layer.featureCount()
-            self._append_log(f"Checking input features (total {total:,} features)")
+            self._append_log(f"入力地物を確認中（全{total:,}地物）")
             for i,f in enumerate(layer.getFeatures()):
                 feats.append(f)
                 try: v=float(f[idx]); ok=math.isfinite(v)
@@ -579,22 +579,22 @@ class MainDialog(QDialog):
                     ok=False
                 if ok: valid.append(i); ys.append(v)
                 if (i + 1) % 1000 == 0:
-                    self._append_log(f"Input check: {i + 1:,}/{total:,} features")
+                    self._append_log(f"入力確認: {i + 1:,}/{total:,}地物")
             n=len(valid)
-            if n < 4: raise ValueError("At least four features with valid numeric values are required.")
-            if n > 20000: raise ValueError("The analysis is limited to 20,000 features. Reduce the study area.")
-            self._append_log(f"Valid features: {n:,} / Missing values or empty geometries: {len(feats) - n:,}")
+            if n < 4: raise ValueError("有効な数値が4地物未満のため計算できません。")
+            if n > 20000: raise ValueError("計算対象は20,000地物までです。対象範囲を絞ってください。")
+            self._append_log(f"有効地物: {n:,} / 欠損または空ジオメトリ: {len(feats) - n:,}")
             if layer.crs().isGeographic():
-                raise ValueError("The input layer uses a geographic coordinate system. Reproject it to a suitable projected coordinate system before analysis so neighbor distances can be calculated.")
+                raise ValueError("入力レイヤが緯度・経度座標系です。距離による近傍判定のため、適切な平面直角座標系などに再投影してから実行してください。")
             mean=sum(ys)/n; z=[v-mean for v in ys]; m2=sum(v*v for v in z)/n
-            if m2 == 0: raise ValueError("The analysis field has no variation.")
+            if m2 == 0: raise ValueError("分析フィールドに変動がありません。")
             subset_feats=[feats[i] for i in valid]
-            self._append_log("Creating representative points and a neighbor index.")
+            self._append_log("代表点と近傍インデックスを作成中です。")
             centers=[]
             for position, feature in enumerate(subset_feats, 1):
                 centers.append(feature.geometry().pointOnSurface().asPoint())
                 if position % 1000 == 0:
-                    self._append_log(f"Creating representative points: {position:,}/{n:,} features")
+                    self._append_log(f"代表点を作成中: {position:,}/{n:,}地物")
             # Index representative points, not polygon bounding boxes. Otherwise
             # nearest-neighbour queries can rank large/irregular polygons by bbox distance.
             index=QgsSpatialIndex()
@@ -604,8 +604,8 @@ class MainDialog(QDialog):
                 point_feature.setGeometry(QgsGeometry.fromPointXY(center))
                 index.addFeature(point_feature)
                 if position % 1000 == 0:
-                    self._append_log(f"Building neighbor index: {position:,}/{n:,} features")
-            self._append_log("Neighbor index creation complete.")
+                    self._append_log(f"近傍インデックス作成: {position:,}/{n:,}地物")
+            self._append_log("近傍インデックスの作成が完了しました。")
             neighbors=[]
             fid_to_pos={f.id():q for q,f in enumerate(subset_feats)}
             for i,f in enumerate(subset_feats):
@@ -620,11 +620,11 @@ class MainDialog(QDialog):
                     near=[j for _,j in ds[:min(self.k_spin.value(),n-1)]]
                 neighbors.append(near[:min(self.k_spin.value(), n-1)])
                 if (i + 1) % 1000 == 0:
-                    self._append_log(f"Finding neighbors: {i + 1:,}/{n:,} features")
+                    self._append_log(f"近傍を検索中: {i + 1:,}/{n:,}地物")
             lag=[sum(z[j] for j in js)/len(js) if js else 0 for i,js in enumerate(neighbors)]
             Ii=[z[i]*lag[i]/m2 for i in range(n)]
             observed=[]; pvals=[]; rng=random.Random(20261106); P=self.perm_spin.value()
-            self._append_log("Running permutation tests for local Moran’s I.")
+            self._append_log("局所 Moran’s I の置換検定を実行中です。")
             report_every=max(1, min(250, n // 20 or 1))
             for i,js in enumerate(neighbors):
                 extreme=0
@@ -637,16 +637,16 @@ class MainDialog(QDialog):
                     if abs(perm) >= abs(Ii[i]): extreme += 1
                 observed.append(Ii[i]); pvals.append((extreme+1)/(P+1))
                 if (i + 1) % report_every == 0 or i + 1 == n:
-                    self._append_log(f"Permutation test: {i + 1:,}/{n:,} features ({(i + 1) * 100.0 / n:.1f}%)")
+                    self._append_log(f"置換検定: {i + 1:,}/{n:,}地物（{(i + 1) * 100.0 / n:.1f}%）")
             qvals=self._bh(pvals)
             alpha=self.alpha_spin.value()
             nominal_count=sum(value <= alpha for value in pvals)
             adjusted_count=sum(value <= alpha for value in qvals)
-            self._append_log(f"Permutation tests complete. Features with unadjusted p values at or below alpha: {nominal_count:,}")
+            self._append_log(f"置換検定完了。未補正p値が有意水準以下: {nominal_count:,}地物")
             if self.fdr_check.isChecked():
-                self._append_log(f"Significant features after FDR correction: {adjusted_count:,} / Minimum adjusted p value: {min(qvals):.6f}")
+                self._append_log(f"FDR補正後の有意地物: {adjusted_count:,} / 最小補正p値: {min(qvals):.6f}")
                 if adjusted_count == 0 and nominal_count > 0:
-                    self._append_log(f"Some features are significant before correction but not after FDR correction. With {P:,} permutations, the minimum p value increment is {1.0 / (P + 1):.6f}. For many simultaneous tests, consider the effect of the number of permutations.")
+                    self._append_log(f"未補正では有意な地物がありますが、FDR補正後は有意ではありません。置換{P:,}回ではp値の最小刻みが{1.0 / (P + 1):.6f}のため、多数の地物を同時検定する場合は置換回数の影響を確認してください。")
             result_by_idx={}
             for i,source_idx in enumerate(valid):
                 sig=(qvals[i] <= alpha) if self.fdr_check.isChecked() else (pvals[i] <= alpha)
@@ -658,7 +658,7 @@ class MainDialog(QDialog):
                     else: cluster="Low-High"
                 result_by_idx[source_idx]=[Ii[i],pvals[i],qvals[i],cluster]
             cluster_counts=Counter(value[3] for value in result_by_idx.values())
-            self._append_log("Cluster categories: " + ", ".join(f"{label} {count:,}" for label, count in sorted(cluster_counts.items())))
+            self._append_log("クラスター区分: " + ", ".join(f"{label} {count:,}" for label, count in sorted(cluster_counts.items())))
             extras=[result_by_idx.get(i,[None,None,None,"No data"]) for i in range(len(feats))]
             # Include all six legend categories, including zero-count categories,
             # in the Excel-compatible statistics CSV.  The summary denominator
@@ -666,26 +666,26 @@ class MainDialog(QDialog):
             lisa_counts=Counter(values[3] for values in extras)
             self._write_lisa_summary(lisa_counts, n, len(feats), append_existing=not owns_output_session)
             outfields=[QgsField("local_I",_field_type("Double")),QgsField("p_perm",_field_type("Double")),QgsField("p_fdr",_field_type("Double")),QgsField("lisa_cluster",_field_type("QString"),len=30)]
-            self._append_log("Writing the LISA result layer to the GeoPackage.")
+            self._append_log("LISA結果レイヤをGeoPackageに書き込んでいます。")
             out=self._output_layer(layer,outfields,feats,extras,layer.name()+"_LISA")
             self._style_clusters(out)
-            self._append_log("LISA result layer write complete.")
-            QMessageBox.information(self,"Complete","The LISA layer was saved to the GeoPackage.\nPath: %s\nLayer: %s\nPermutations=%d, neighbors=%d."%(self.output_path,out.name(),P,self.k_spin.value()))
+            self._append_log("LISA結果レイヤの書き込みが完了しました。")
+            QMessageBox.information(self,"完了","LISAレイヤをGeoPackageに保存しました。\n保存先: %s\nレイヤ: %s\n検定回数=%d、近傍数=%d。"%(self.output_path,out.name(),P,self.k_spin.value()))
         except Exception as e:
-            self._append_log("Error: " + str(e))
-            QMessageBox.critical(self,"LISA calculation error",str(e))
+            self._append_log("エラー: " + str(e))
+            QMessageBox.critical(self,"LISA計算エラー",str(e))
         finally:
             if owns_output_session:
                 self._output_session_active = False
-                self._finish_log("LISA calculation finished.")
+                self._finish_log("LISA計算を終了しました。")
 
     def _write_lisa_summary(self, counts, analysis_count, total_count, append_existing=False):
         """Append LISA category counts to the Excel-compatible summary CSV."""
         path = (self.output_path[:-5] if self.output_path and self.output_path.lower().endswith(".gpkg") else self.output_path) if self.output_path else None
         if not path:
-            path, _ = QFileDialog.getSaveFileName(self, "Save LISA summary", "lisa_category_summary.csv", "CSV (*.csv)")
+            path, _ = QFileDialog.getSaveFileName(self, "LISAサマリーの保存", "lisa_category_summary.csv", "CSV (*.csv)")
             if not path:
-                self._append_log("The LISA category summary was not saved.")
+                self._append_log("LISAカテゴリ別サマリーは保存されませんでした。")
                 return
         if not path.lower().endswith(".csv"):
             path += "_statistics.csv"
@@ -696,14 +696,14 @@ class MainDialog(QDialog):
             writer = csv.writer(fp)
             if file_exists:
                 writer.writerow([])
-            writer.writerow(["LISA category counts"])
-            writer.writerow(["Category", "Feature count", "Analysis features", "All features", "Percent of all features (%)"])
+            writer.writerow(["LISAカテゴリ別該当数"])
+            writer.writerow(["カテゴリ", "該当数", "分析対象数", "全地物数", "全地物に占める割合（%）"])
             for category in categories:
                 count = counts.get(category, 0)
                 percent = (100.0 * count / total_count) if total_count else 0.0
                 writer.writerow([category, count, analysis_count, total_count, percent])
-            writer.writerow(["Total", sum(counts.get(category, 0) for category in categories), analysis_count, total_count, 100.0 if total_count else 0.0])
-        self._append_log("Appended LISA category counts to the summary CSV: " + path)
+            writer.writerow(["合計", sum(counts.get(category, 0) for category in categories), analysis_count, total_count, 100.0 if total_count else 0.0])
+        self._append_log("LISAカテゴリ別該当数をサマリーCSVに追記しました: " + path)
 
     @staticmethod
     def _bh(p):
