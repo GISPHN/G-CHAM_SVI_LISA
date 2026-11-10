@@ -41,7 +41,7 @@ LISA: local_I、p_perm、p_fdr、p_ess_bh、aple_rho、ess_n、lisa_method、lis
 
 ## ESS補正BH法の参考文献
 
-Arbia, G., Cardile, F., & Salvini, N. (2026). *How Many Significant LISA?: A multiple testing correction* (arXiv:2610.13472v1). https://arxiv.org/abs/2610.13472
+Arbia, G., Cardile, F., Nardelli, V., & Salvini, N. (2026). *How Many Significant LISA?: A multiple testing correction* (arXiv:2610.13472v1). https://arxiv.org/abs/2610.13472
 
 ライセンス
 MIT License
