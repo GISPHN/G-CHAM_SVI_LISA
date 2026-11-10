@@ -6,7 +6,7 @@ authors:
   - family-names: Horiike
     given-names: Ryo
     affiliation: GISPHN
-version: 0.1.7
+version: 0.1.8
 date-released: 2026-11-10
 license: MIT
 repository-code: "https://github.com/GISPHN/G-CHAM_SVI_LISA"
