@@ -1,4 +1,4 @@
-G-CHAM SVI and LISA (0.1.6)
+G-CHAM SVI and LISA (0.1.7)
 
 インストール
 
