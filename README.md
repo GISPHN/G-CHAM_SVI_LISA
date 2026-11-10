@@ -7,7 +7,7 @@
 - 指標の元データ、または分子・分母から算出した割合を使用
 - 指標ごとの順位方向の反転
 - 平均順位法による0〜1のパーセンタイル化とSVIの合算
-- k近傍法、行標準化、置換検定、Benjamini–Hochberg法によるFDR補正を用いたLISA
+- k近傍法、行標準化、置換検定を用いたLISA。ESS補正BH法を既定とし、通常BH法・補正なしも選択可能
 - SVIとLISA結果のGeoPackage保存
 - SVI記述統計とLISAカテゴリ別該当数のCSV出力
 
@@ -21,6 +21,7 @@
 - SVIは選択した全指標に有効値がある地物のみ計算します。欠損値の補完は行いません。
 - LISAでは数値欠損または空ジオメトリを分析対象から除外します。
 - 空間重みは投影座標系上の代表点によるk近傍法です。
+- ESS補正BH法は、局所分析値から推定したAPLE係数を使って有効サンプルサイズ（ESS）を求め、BH法の検定閾値を調整します。論文で提案された方法であり、指定した水準でのFDR制御を保証しません。論文では検出力向上と経験的FDR増加のトレードオフが報告されています。
 - LISAの有効地物数は20,000件までです。
 - 結果の研究利用・公表前に、対象データに応じた妥当性確認を行ってください。
 
@@ -34,16 +35,16 @@ MIT License。詳細は [`svi_lisa_qgis/LICENSE`](svi_lisa_qgis/LICENSE) を参�
 
 ## 引用
 
-研究等で本プラグインを使用した場合は、利用したバージョンを明記して引用してください。以下はバージョン0.1.5の例です。各引用文をコピーして使用できます。
+研究等で本プラグインを使用した場合は、利用したバージョンを明記して引用してください。以下はバージョン0.1.6の例です。各引用文をコピーして使用できます。
 
 APA第7版：
 
-> GISPHN (Ryo Horiike). (2026). *G-CHAM SVI and LISA* (Version 0.1.5) [Computer software]. GitHub.  
+> GISPHN (Ryo Horiike). (2026). *G-CHAM SVI and LISA* (Version 0.1.6) [Computer software]. GitHub.  
 > https://github.com/GISPHN/G-CHAM_SVI_LISA
 
 Vancouver形式：
 
-> GISPHN (Ryo Horiike). G-CHAM SVI and LISA [computer software]. Version 0.1.5. GitHub; 2026 [cited 2026 Nov 10]. Available from: https://github.com/GISPHN/G-CHAM_SVI_LISA
+> GISPHN (Ryo Horiike). G-CHAM SVI and LISA [computer software]. Version 0.1.6. GitHub; 2026 [cited 2026 Nov 10]. Available from: https://github.com/GISPHN/G-CHAM_SVI_LISA
 
 BibTeX：
 
@@ -51,11 +52,11 @@ BibTeX：
 @software{Horiike2026GCHAMSVILISA,
   author = {{GISPHN (Ryo Horiike)}},
   title = {G-CHAM SVI and LISA},
-  version = {0.1.5},
+  version = {0.1.6},
   year = {2026},
   url = {https://github.com/GISPHN/G-CHAM_SVI_LISA},
   note = {QGIS plugin}
 }
 ```
 
-GitHubの引用機能向けメタデータは [`CITATION.cff`](CITATION.cff) に掲載しています。LISAの分析方法を説明する場合は、方法の原著論文も引用してください。原著論文の詳細と追加の案内は [`CITATION.md`](CITATION.md) を参照してください。
+GitHubの引用機能向けメタデータは [`CITATION.cff`](CITATION.cff) に掲載しています。ESS補正BH法を使用した場合は、提案論文も引用してください。詳細は [`CITATION.md`](CITATION.md) を参照してください。
