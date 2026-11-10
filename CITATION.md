@@ -1,15 +1,15 @@
 # プラグインの引用形式
 
-以下はバージョン0.1.6の引用例です。研究論文、報告書、教材などにコピーして使用できます。別バージョンを使用した場合は、引用内のバージョン番号を置き換えてください。
+以下はバージョン0.1.7の引用例です。研究論文、報告書、教材などにコピーして使用できます。別バージョンを使用した場合は、引用内のバージョン番号を置き換えてください。
 
 APA第7版：
 
-> GISPHN (Ryo Horiike). (2026). *G-CHAM SVI and LISA* (Version 0.1.6) [Computer software]. GitHub.  
+> GISPHN (Ryo Horiike). (2026). *G-CHAM SVI and LISA* (Version 0.1.7) [Computer software]. GitHub.  
 > https://github.com/GISPHN/G-CHAM_SVI_LISA
 
 Vancouver形式：
 
-> GISPHN (Ryo Horiike). G-CHAM SVI and LISA [computer software]. Version 0.1.6. GitHub; 2026 [cited 2026 Nov 10]. Available from: https://github.com/GISPHN/G-CHAM_SVI_LISA
+> GISPHN (Ryo Horiike). G-CHAM SVI and LISA [computer software]. Version 0.1.7. GitHub; 2026 [cited 2026 Nov 10]. Available from: https://github.com/GISPHN/G-CHAM_SVI_LISA
 
 BibTeX：
 
@@ -17,7 +17,7 @@ BibTeX：
 @software{Horiike2026GCHAMSVILISA,
   author = {{GISPHN (Ryo Horiike)}},
   title = {G-CHAM SVI and LISA},
-  version = {0.1.6},
+  version = {0.1.7},
   year = {2026},
   url = {https://github.com/GISPHN/G-CHAM_SVI_LISA},
   note = {QGIS plugin}
