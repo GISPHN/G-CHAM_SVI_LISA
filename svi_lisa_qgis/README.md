@@ -1,4 +1,4 @@
-G-CHAM SVI and LISA (0.1.4)
+G-CHAM SVI and LISA (0.1.6)
 
 インストール
 
@@ -14,7 +14,8 @@ G-CHAM SVI and LISA (0.1.4)
 - 最大寄与指標（指標パーセンタイルが最大の指標。因果的寄与ではありません）
 - 記述統計CSV
 - SVI後の自動LISAまたはLISA単独実行で、Excelで開けるサマリーCSVに6カテゴリ（High-High、Low-Low、High-Low、Low-High、Not significant、No data）の該当数を出力。全地物数と分析対象数も併記
-- 任意の数値フィールドに対する局所Moran's I（k近傍、行標準化、置換検定、FDR補正）
+- 任意の数値フィールドに対する局所Moran's I（k近傍、行標準化、置換検定）
+- ESS補正BH法を既定の多重検定判定法として選択。通常のBenjamini–Hochberg法または補正なしにも切り替え可能
 - 結果レイヤを自動追加し、SVIまたはLISAクラスターで着色
 - SVIのリスク強度とLISAの局所クラスターを表すアイコンをメニューとツールバーに表示
 - 計算中に進行状況・処理件数・出力先を表示する実行ログ
@@ -25,7 +26,9 @@ G-CHAM SVI and LISA (0.1.4)
 - 比較対象は入力レイヤ全体です。自治体別などの層別計算は未実装です。
 - SVIは、選択した全指標がそろっている地物のみ計算します。欠損を0で補完しません。
 - 空間重みはk近傍法のみです。代表点（point-on-surface）の近傍を平面距離で求めるため、投影座標系が必要です。緯度・経度座標系は実行前にエラーとして止めます。
-- LISAは各指標のp値を計算し、初期設定ではBenjamini–Hochberg法で補正して有意性を判定します。
+- ESS補正BH法は、分析フィールドとk近傍行標準化重みからAPLE係数を推定し、論文の式によるESSを計算します。BH法の有意判定閾値は順位kに対して `min(k × α / ESS, α)` です。
+- ESS補正BH法は論文で提案された方法であり、設定した有意水準でのFDR制御を保証する方法ではありません。論文のシミュレーションでは検出力の向上とともに経験的FDRも増加しており、結果の解釈には注意が必要です。APLEが0以下またはESSが算出できない場合は通常BH法へ自動で切り替えます。
+- 出力には置換p値、通常BH調整p値、ESS補正BH調整p値、APLE、ESS、選択した判定法を保存します。サマリーCSVには使用方法・ESS等の設定と6カテゴリの該当数を記録します。
 - 置換p値の乱数シードは20261106に固定しています。
 - LISAは大規模データで時間がかかります。有効地物数は20,000件を上限とします。全国250mメッシュのような大規模データでの実行性能は未検証です。
 - SVIとLISAは同じGeoPackageに別レイヤとして保存できます。指定した出力ファイルが既にある場合は既存結果を保持し、_1、_2の連番を付けた新しいファイルに保存します。
@@ -34,7 +37,11 @@ G-CHAM SVI and LISA (0.1.4)
 
 出力列
 SVI: ind01_raw / ind01_pct のように指標ごとに元値とパーセンタイル、svi_sum、svi_mean、svi_pct、max_ind、max_pct。
-LISA: local_I、p_perm、p_fdr、lisa_cluster。
+LISA: local_I、p_perm、p_fdr、p_ess_bh、aple_rho、ess_n、lisa_method、lisa_cluster。
+
+## ESS補正BH法の参考文献
+
+Arbia, G., Cardile, F., & Salvini, N. (2026). *How Many Significant LISA?: A multiple testing correction* (arXiv:2610.13472v1). https://arxiv.org/abs/2610.13472
 
 ライセンス
 MIT License
