@@ -689,13 +689,15 @@ class MainDialog(QDialog):
                     elif z[i] >= 0 and lag[i] < 0: cluster="High-Low"
                     else: cluster="Low-High"
                 result_by_idx[source_idx]=[Ii[i],pvals[i],qvals[i],ess_qvals[i] if ess_qvals is not None else None,ap_le,ess,applied_label,cluster]
-            cluster_counts=Counter(value[3] for value in result_by_idx.values())
+            # LISA result arrays store the category in position 7; positions
+            # 2 and 3 contain the ordinary and ESS adjusted p-values.
+            cluster_counts=Counter(value[7] for value in result_by_idx.values())
             self._append_log("クラスター区分: " + ", ".join(f"{label} {count:,}" for label, count in sorted(cluster_counts.items())))
             extras=[result_by_idx.get(i,[None,None,None,None,None,None,applied_label,"No data"]) for i in range(len(feats))]
             # Include all six legend categories, including zero-count categories,
             # in the Excel-compatible statistics CSV.  The summary denominator
             # is all input features; the analysis denominator excludes No data.
-            lisa_counts=Counter(values[3] for values in extras)
+            lisa_counts=Counter(values[7] for values in extras)
             self._write_lisa_summary(lisa_counts, n, len(feats), method_labels.get(method, method), applied_label, alpha, ap_le, ess, append_existing=not owns_output_session)
             outfields=[QgsField("local_I",_field_type("Double")),QgsField("p_perm",_field_type("Double")),QgsField("p_fdr",_field_type("Double")),QgsField("p_ess_bh",_field_type("Double")),QgsField("aple_rho",_field_type("Double")),QgsField("ess_n",_field_type("Double")),QgsField("lisa_method",_field_type("QString"),len=30),QgsField("lisa_cluster",_field_type("QString"),len=30)]
             self._append_log("LISA結果レイヤをGeoPackageに書き込んでいます。")
