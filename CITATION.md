@@ -32,6 +32,6 @@ Anselin, L. (1995). Local indicators of spatial association—LISA. *Geographica
 
 ESS補正BH法を使用した場合は、提案論文も引用してください。
 
-Arbia, G., Cardile, F., & Salvini, N. (2026). *How Many Significant LISA?: A multiple testing correction* (arXiv:2610.13472v1). https://doi.org/10.48550/arXiv.2610.13472
+Arbia, G., Cardile, F., Nardelli, V., & Salvini, N. (2026). *How Many Significant LISA?: A multiple testing correction* (arXiv:2610.13472v1). https://doi.org/10.48550/arXiv.2610.13472
 
 GitHubの引用機能向けメタデータは [`CITATION.cff`](CITATION.cff) に掲載しています。
