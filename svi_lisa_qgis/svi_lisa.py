@@ -88,6 +88,7 @@ class MainDialog(QDialog):
         self.setWindowTitle("G-CHAM SVI and LISA")
         self.resize(720, 650)
         self._output_session_active = False
+        self.output_base_path = None
         self.log_dialog = None
         self.log_output = None
         self._log_close_button = None
@@ -211,11 +212,14 @@ class MainDialog(QDialog):
             button.setEnabled(True)
 
     def refresh_layers(self):
+        # Keep stable layer IDs in itemData instead of QgsVectorLayer wrappers.
+        # A wrapper can become stale when a layer is removed or replaced while
+        # this dialog remains open between repeated runs.
         current = self.layer_combo.currentData()
         self.layer_combo.blockSignals(True); self.layer_combo.clear()
         for layer in QgsProject.instance().mapLayers().values():
             if isinstance(layer, QgsVectorLayer) and layer.isValid() and QgsWkbTypes.geometryType(layer.wkbType()) == _polygon_geometry_type():
-                self.layer_combo.addItem(layer.name(), layer)
+                self.layer_combo.addItem(layer.name(), layer.id())
         if current:
             i = self.layer_combo.findData(current)
             if i >= 0: self.layer_combo.setCurrentIndex(i)
@@ -223,7 +227,13 @@ class MainDialog(QDialog):
         self.refresh_fields()
 
     def layer(self):
-        return self.layer_combo.currentData()
+        layer_id = self.layer_combo.currentData()
+        if not layer_id:
+            return None
+        layer = QgsProject.instance().mapLayer(str(layer_id))
+        if isinstance(layer, QgsVectorLayer) and layer.isValid():
+            return layer
+        return None
 
     def numeric_fields(self):
         layer = self.layer()
@@ -288,12 +298,14 @@ class MainDialog(QDialog):
     def choose_output(self):
         path, _ = QFileDialog.getSaveFileName(self, "GeoPackage出力先", "svi_lisa_output.gpkg", "GeoPackage (*.gpkg)")
         if path:
-            self._set_output_path(path)
+            self._set_output_path(path, update_base=True)
 
-    def _set_output_path(self, path):
+    def _set_output_path(self, path, update_base=False):
         if path and not path.lower().endswith(".gpkg"):
             path += ".gpkg"
         self.output_path = path
+        if update_base or self.output_base_path is None:
+            self.output_base_path = path
         self.svi_path.setText("出力先: " + path)
         self.lisa_path.setText("出力先: " + path)
 
@@ -303,21 +315,23 @@ class MainDialog(QDialog):
         path, _ = QFileDialog.getSaveFileName(self, title, "svi_lisa_output.gpkg", "GeoPackage (*.gpkg)")
         if not path:
             return False
-        self._set_output_path(path)
+        self._set_output_path(path, update_base=True)
         return True
 
     def _select_fresh_output_path(self):
-        """Avoid update-mode failures and preserve previous GeoPackage results."""
-        if not self.output_path or not os.path.exists(self.output_path):
+        """Use a unique timestamped GeoPackage path for every run."""
+        base_path = self.output_base_path or self.output_path
+        if not base_path:
             return
-        base, ext = os.path.splitext(self.output_path)
+        base, ext = os.path.splitext(base_path)
         ext = ext or ".gpkg"
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        candidate = f"{base}_{timestamp}{ext}"
         index = 1
-        candidate = f"{base}_{index}{ext}"
         while os.path.exists(candidate):
+            candidate = f"{base}_{timestamp}_{index}{ext}"
             index += 1
-            candidate = f"{base}_{index}{ext}"
-        self._set_output_path(candidate)
+        self._set_output_path(candidate, update_base=False)
 
     def _indicators(self):
         specs = []
@@ -510,7 +524,7 @@ class MainDialog(QDialog):
             self._write_stats(specs, raw, percs, means, svi_rank)
             self._append_log("記述統計CSVの書き込みが完了しました。")
             if self.auto_lisa.isChecked():
-                self.layer_combo.addItem(out.name(), out)
+                self.layer_combo.addItem(out.name(), out.id())
                 self.layer_combo.setCurrentIndex(self.layer_combo.count() - 1)
                 self.refresh_fields()
                 self.lisa_field.setCurrentText("svi_sum")
