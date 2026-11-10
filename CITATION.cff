@@ -6,10 +6,11 @@ authors:
   - family-names: Horiike
     given-names: Ryo
     affiliation: GISPHN
-version: 0.1.5
+version: 0.1.6
 date-released: 2026-11-10
 license: MIT
 repository-code: "https://github.com/GISPHN/G-CHAM_SVI_LISA"
 abstract: >-
   A QGIS plugin for calculating a Social Vulnerability Index and performing
-  local Moran's I analysis on polygon layers.
+  local Moran's I analysis on polygon layers, with ESS adjusted
+  Benjamini-Hochberg correction available as the default method.
