@@ -148,14 +148,21 @@ class MainDialog(QDialog):
         self.perm_spin = QSpinBox(); self.perm_spin.setRange(99, 9999); self.perm_spin.setSingleStep(100); self.perm_spin.setValue(999)
         form.addRow("置換検定回数", self.perm_spin)
         self.alpha_spin = QDoubleSpinBox(); self.alpha_spin.setRange(0.001, 0.2); self.alpha_spin.setDecimals(3); self.alpha_spin.setSingleStep(0.01); self.alpha_spin.setValue(0.05)
-        form.addRow("有意水準（FDR補正後）", self.alpha_spin)
+        form.addRow("有意水準 α", self.alpha_spin)
         layout.addLayout(form)
-        self.fdr_check = QCheckBox("Benjamini–Hochberg FDR補正を使用")
-        self.fdr_check.setChecked(True); layout.addWidget(self.fdr_check)
+        self.adjustment_combo = QComboBox()
+        self.adjustment_combo.addItem("ESS補正BH法（既定）", "ess_bh")
+        self.adjustment_combo.addItem("Benjamini–Hochberg法", "bh")
+        self.adjustment_combo.addItem("補正なし（未補正p値）", "none")
+        self.adjustment_combo.setToolTip(
+            "ESS補正BH法では、分析値とk近傍の空間重みからAPLE係数とESSを算出し、\n"
+            "論文提案のESS調整済みBH閾値を使用します。"
+        )
+        form.addRow("多重検定補正", self.adjustment_combo)
         self.lisa_path = QLabel("出力先: 一時レイヤ")
         lisa_path_btn = QPushButton("出力先を選択"); lisa_path_btn.clicked.connect(self.choose_output)
         row = QHBoxLayout(); row.addWidget(self.lisa_path); row.addWidget(lisa_path_btn); layout.addLayout(row)
-        explain = QLabel("k近傍法・行標準化を使用します。結果には局所Moran’s I、置換p値、FDR補正後p値、クラスター区分を追加します。結果は指定したGeoPackageに保存され、SVI自動実行時はSVIレイヤと同じファイルに別レイヤとして追加されます。大規模データでは計算に時間がかかります。")
+        explain = QLabel("k近傍法・行標準化を使用します。初期設定はESS補正BH法です。結果には通常BH法とESS補正BH法の補正p値、APLE係数、ESS、選択した判定方法、クラスター区分を保存します。ESS補正BH法は論文提案法で、設定した有意水準でのFDR制御を保証するものではありません。")
         explain.setWordWrap(True); layout.addWidget(explain)
         calc = QPushButton("LISAを計算してレイヤを追加")
         calc.clicked.connect(self.calculate_lisa)
@@ -557,7 +564,9 @@ class MainDialog(QDialog):
             self._output_session_active = True
             self._start_log("LISA計算")
         self._append_log(f"分析レイヤ: {layer.name()} / フィールド: {field}")
-        self._append_log(f"置換回数: {self.perm_spin.value():,} / 近傍数: {self.k_spin.value()} / FDR補正: {'使用' if self.fdr_check.isChecked() else '不使用'}")
+        method = self.adjustment_combo.currentData()
+        method_labels = {"ess_bh": "ESS補正BH法", "bh": "Benjamini–Hochberg法", "none": "補正なし"}
+        self._append_log(f"置換回数: {self.perm_spin.value():,} / 近傍数: {self.k_spin.value()} / 判定方法: {method_labels.get(method, method)}")
         if self.output_path:
             self._append_log(f"出力先: {self.output_path}")
         try:
@@ -639,33 +648,56 @@ class MainDialog(QDialog):
                 if (i + 1) % report_every == 0 or i + 1 == n:
                     self._append_log(f"置換検定: {i + 1:,}/{n:,}地物（{(i + 1) * 100.0 / n:.1f}%）")
             qvals=self._bh(pvals)
+            ap_le = self._aple(z, neighbors)
+            ess = self._effective_sample_size(n, ap_le)
+            ess_qvals = self._ess_bh(pvals, ess) if ess is not None else None
+            applied_method = method
+            if method == "ess_bh" and ess_qvals is None:
+                applied_method = "bh_fallback"
+            applied_label = {
+                "ess_bh": "ESS補正BH法",
+                "bh": "Benjamini–Hochberg法",
+                "bh_fallback": "BH法（ESS適用外）",
+                "none": "補正なし",
+            }.get(applied_method, applied_method)
             alpha=self.alpha_spin.value()
             nominal_count=sum(value <= alpha for value in pvals)
-            adjusted_count=sum(value <= alpha for value in qvals)
+            selected_qvals = ess_qvals if applied_method == "ess_bh" else qvals
+            selected_count = sum(value <= alpha for value in selected_qvals) if applied_method != "none" else nominal_count
             self._append_log(f"置換検定完了。未補正p値が有意水準以下: {nominal_count:,}地物")
-            if self.fdr_check.isChecked():
-                self._append_log(f"FDR補正後の有意地物: {adjusted_count:,} / 最小補正p値: {min(qvals):.6f}")
-                if adjusted_count == 0 and nominal_count > 0:
-                    self._append_log(f"未補正では有意な地物がありますが、FDR補正後は有意ではありません。置換{P:,}回ではp値の最小刻みが{1.0 / (P + 1):.6f}のため、多数の地物を同時検定する場合は置換回数の影響を確認してください。")
+            self._append_log(f"APLE係数: {ap_le:.6f} / ESS: {ess:.2f} / 有意水準 α: {alpha:.3f}")
+            if applied_method == "bh_fallback":
+                self._append_log("APLE係数が正で有効なESSを算出できなかったため、今回の有意判定は通常BH法に切り替えました。負の空間依存にESS補正BH法を適用する妥当性は論文で検討されていません。")
+            if applied_method == "none":
+                self._append_log(f"補正なしの有意地物: {selected_count:,}")
+            else:
+                label = "ESS補正BH法" if applied_method == "ess_bh" else "Benjamini–Hochberg法"
+                self._append_log(f"{label}で有意な地物: {selected_count:,} / 最小調整p値: {min(selected_qvals):.6f}")
+                if selected_count == 0 and nominal_count > 0:
+                    self._append_log(f"未補正では有意な地物がありますが、選択した補正後は有意ではありません。置換{P:,}回ではp値の最小刻みが{1.0 / (P + 1):.6f}のため、多数の地物を同時検定する場合は置換回数の影響を確認してください。")
             result_by_idx={}
             for i,source_idx in enumerate(valid):
-                sig=(qvals[i] <= alpha) if self.fdr_check.isChecked() else (pvals[i] <= alpha)
+                if applied_method == "none":
+                    sig = pvals[i] <= alpha
+                else:
+                    use_ess = applied_method == "ess_bh"
+                    sig = (ess_qvals[i] if use_ess else qvals[i]) <= alpha
                 cluster="Not significant"
                 if sig:
                     if z[i] >= 0 and lag[i] >= 0: cluster="High-High"
                     elif z[i] < 0 and lag[i] < 0: cluster="Low-Low"
                     elif z[i] >= 0 and lag[i] < 0: cluster="High-Low"
                     else: cluster="Low-High"
-                result_by_idx[source_idx]=[Ii[i],pvals[i],qvals[i],cluster]
+                result_by_idx[source_idx]=[Ii[i],pvals[i],qvals[i],ess_qvals[i] if ess_qvals is not None else None,ap_le,ess,applied_label,cluster]
             cluster_counts=Counter(value[3] for value in result_by_idx.values())
             self._append_log("クラスター区分: " + ", ".join(f"{label} {count:,}" for label, count in sorted(cluster_counts.items())))
-            extras=[result_by_idx.get(i,[None,None,None,"No data"]) for i in range(len(feats))]
+            extras=[result_by_idx.get(i,[None,None,None,None,None,None,applied_label,"No data"]) for i in range(len(feats))]
             # Include all six legend categories, including zero-count categories,
             # in the Excel-compatible statistics CSV.  The summary denominator
             # is all input features; the analysis denominator excludes No data.
             lisa_counts=Counter(values[3] for values in extras)
-            self._write_lisa_summary(lisa_counts, n, len(feats), append_existing=not owns_output_session)
-            outfields=[QgsField("local_I",_field_type("Double")),QgsField("p_perm",_field_type("Double")),QgsField("p_fdr",_field_type("Double")),QgsField("lisa_cluster",_field_type("QString"),len=30)]
+            self._write_lisa_summary(lisa_counts, n, len(feats), method_labels.get(method, method), applied_label, alpha, ap_le, ess, append_existing=not owns_output_session)
+            outfields=[QgsField("local_I",_field_type("Double")),QgsField("p_perm",_field_type("Double")),QgsField("p_fdr",_field_type("Double")),QgsField("p_ess_bh",_field_type("Double")),QgsField("aple_rho",_field_type("Double")),QgsField("ess_n",_field_type("Double")),QgsField("lisa_method",_field_type("QString"),len=30),QgsField("lisa_cluster",_field_type("QString"),len=30)]
             self._append_log("LISA結果レイヤをGeoPackageに書き込んでいます。")
             out=self._output_layer(layer,outfields,feats,extras,layer.name()+"_LISA")
             self._style_clusters(out)
@@ -679,7 +711,7 @@ class MainDialog(QDialog):
                 self._output_session_active = False
                 self._finish_log("LISA計算を終了しました。")
 
-    def _write_lisa_summary(self, counts, analysis_count, total_count, append_existing=False):
+    def _write_lisa_summary(self, counts, analysis_count, total_count, selected_method, applied_method, alpha, ap_le, ess, append_existing=False):
         """Append LISA category counts to the Excel-compatible summary CSV."""
         path = (self.output_path[:-5] if self.output_path and self.output_path.lower().endswith(".gpkg") else self.output_path) if self.output_path else None
         if not path:
@@ -696,6 +728,13 @@ class MainDialog(QDialog):
             writer = csv.writer(fp)
             if file_exists:
                 writer.writerow([])
+            writer.writerow(["LISA解析設定"])
+            writer.writerow(["選択方法", selected_method])
+            writer.writerow(["実適用方法", applied_method])
+            writer.writerow(["有意水準 α", alpha])
+            writer.writerow(["APLE係数", ap_le])
+            writer.writerow(["有効サンプルサイズ（ESS）", ess])
+            writer.writerow(["分析対象数", analysis_count])
             writer.writerow(["LISAカテゴリ別該当数"])
             writer.writerow(["カテゴリ", "該当数", "分析対象数", "全地物数", "全地物に占める割合（%）"])
             for category in categories:
@@ -703,13 +742,69 @@ class MainDialog(QDialog):
                 percent = (100.0 * count / total_count) if total_count else 0.0
                 writer.writerow([category, count, analysis_count, total_count, percent])
             writer.writerow(["合計", sum(counts.get(category, 0) for category in categories), analysis_count, total_count, 100.0 if total_count else 0.0])
-        self._append_log("LISAカテゴリ別該当数をサマリーCSVに追記しました: " + path)
+        self._append_log("LISA解析設定とカテゴリ別該当数をサマリーCSVに追記しました: " + path)
 
     @staticmethod
     def _bh(p):
         n=len(p); order=sorted(range(n),key=lambda i:p[i]); q=[1.0]*n; running=1.0
         for rank0 in range(n-1,-1,-1):
             i=order[rank0]; rank=rank0+1; running=min(running,p[i]*n/rank); q[i]=min(1.0,running)
+        return q
+
+    @staticmethod
+    def _aple(z, neighbors):
+        """Estimate the global spatial dependence coefficient with APLE."""
+        n = len(z)
+        if n < 2:
+            raise ValueError("APLEの推定には2地物以上が必要です。")
+        lag = [sum(z[j] for j in js) / len(js) if js else 0.0 for js in neighbors]
+        numerator = sum(z[i] * lag[i] for i in range(n))
+        z_norm = sum(value * value for value in z)
+        denominator = sum(value * value for value in lag)
+        neighbor_sets = [set(js) for js in neighbors]
+        trace_w2 = 0.0
+        for i, js in enumerate(neighbors):
+            ki = len(js)
+            if not ki:
+                continue
+            trace_w2 += sum(1.0 / (ki * len(neighbors[j])) for j in js
+                            if i in neighbor_sets[j] and neighbors[j])
+        denominator += (trace_w2 / n) * z_norm
+        if not math.isfinite(denominator) or denominator <= 0:
+            raise ValueError("APLEの分母が0以下または非有限となりました。")
+        rho = numerator / denominator
+        if not math.isfinite(rho):
+            raise ValueError("APLE係数を有限値として推定できませんでした。")
+        return rho
+
+    @staticmethod
+    def _effective_sample_size(n, rho):
+        """Calculate ESS using the formula in the referenced ESS paper."""
+        if n < 2 or not math.isfinite(rho) or rho <= 0 or rho >= 1:
+            return None
+        one_minus = 1.0 - rho
+        power_term = (1.0 - rho ** (n - 1)) / n
+        denominator = (1.0 + 2.0 * (rho / one_minus) * (1.0 - 1.0 / n)
+                       - 2.0 * (rho / (one_minus * one_minus)) * power_term)
+        if not math.isfinite(denominator) or denominator <= 0:
+            return None
+        ess = n / denominator
+        if not math.isfinite(ess) or ess <= 0:
+            return None
+        return ess
+
+    @staticmethod
+    def _ess_bh(p, ess):
+        """Return ESS adjusted BH q values for thresholds min(k*alpha/ESS, alpha)."""
+        n = len(p)
+        order = sorted(range(n), key=lambda i: p[i])
+        q = [1.0] * n
+        running = 1.0
+        for rank0 in range(n - 1, -1, -1):
+            i = order[rank0]
+            rank = rank0 + 1
+            running = min(running, p[i] * max(ess / rank, 1.0))
+            q[i] = min(1.0, running)
         return q
 
     def _style_clusters(self, layer):
